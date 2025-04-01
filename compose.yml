@@ -1,0 +1,66 @@
+services:
+  api-mysql:
+    build:
+      context: ./mysql
+      dockerfile: ./Dockerfile
+    container_name: todo-app-api-db
+    ports:
+      - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - kzm_todo_api_db_volume:/var/lib/mysql
+      - ./mysql/api/conf.d:/etc/mysql/conf.d
+      - ./mysql/api/init:/docker-entrypoint-initdb.d
+    networks:
+      - kzm_todo_app_network
+
+  keycloak-mysql:
+    build:
+      context: ./mysql
+      dockerfile: ./Dockerfile
+    container_name: todo-app-keycloak-db
+    ports:
+      - 3307:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - kzm_todo_api_keycloak_volume:/var/lib/mysql
+      - ./mysql/keycloak/conf.d:/etc/mysql/conf.d
+      - ./mysql/keycloak/init:/docker-entrypoint-initdb.d
+    networks:
+      - kzm_todo_app_network
+
+  keycloak:
+    build:
+      context: ./keycloak/
+      dockerfile: Dockerfile
+    container_name: todo-app-keycloak
+    ports:
+      - 8080:8080
+    command:
+      - start-dev
+    depends_on:
+      - keycloak-mysql
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_HOSTNAME=http://localhost:8080/
+      - KC_DB=mysql
+      - KC_DB_URL_HOST=keycloak-mysql
+      - KC_DB_URL_PORT=3306
+      - KC_DB_URL_DATABASE=keycloak
+      - KC_DB_USERNAME=root
+      - KC_DB_PASSWORD=root
+    networks:
+      - kzm_todo_app_network
+
+volumes:
+  kzm_todo_api_db_volume:
+    name: kzm_todo_api_db_volume
+  kzm_todo_api_keycloak_volume:
+    name: kzm_todo_api_keycloak_volume
+
+networks:
+  kzm_todo_app_network:
+    name: kzm_todo_app_network
